@@ -138,6 +138,30 @@ WHERE f.entity_type = 'field_collection_item' AND f.bundle = 'field_bioacoustic_
 
 UNION ALL
 
+-- The places recordings were made. A place is described once, in
+-- locations.sql, however many records were made or collected there.
+SELECT 'recordings', l.entity_id, 'http://rs.tdwg.org/dwc/iri/inDescribedPlace',
+  'locations', l.field_recording_location_nid, NULL, NULL, NULL, NULL
+FROM field_data_field_recording_location l
+JOIN node n ON n.nid = l.entity_id AND n.type = 'recording' AND n.status = 1
+JOIN field_data_field_recording fr
+  ON fr.entity_type = 'node' AND fr.entity_id = n.nid AND fr.deleted = 0 AND fr.delta = 0
+JOIN file_managed fm ON fm.fid = fr.field_recording_fid
+JOIN node p ON p.nid = l.field_recording_location_nid AND p.type = 'location' AND p.status = 1
+WHERE l.entity_type = 'node' AND l.deleted = 0
+
+UNION ALL
+
+-- The places specimens were collected or observed
+SELECT 'specimens', l.entity_id, 'http://rs.tdwg.org/dwc/iri/inDescribedPlace',
+  'locations', l.field_location_nid, NULL, NULL, NULL, NULL
+FROM field_data_field_location l
+JOIN node n ON n.nid = l.entity_id AND n.type = 'specimen_observation' AND n.status = 1
+JOIN node p ON p.nid = l.field_location_nid AND p.type = 'location' AND p.status = 1
+WHERE l.entity_type = 'node' AND l.deleted = 0
+
+UNION ALL
+
 -- References about topics (the site's Non-bio terms, e.g. Soundscapes)
 SELECT 'references', f.entity_id, 'http://purl.obolibrary.org/obo/IAO_0000136',
   'term', NULL, NULL, f.field_non_biological_tid, NULL, NULL
