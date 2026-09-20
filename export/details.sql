@@ -258,4 +258,22 @@ SELECT d.type, d.id, d.name, d.delta, d.value, d.unit FROM (
 JOIN node n ON n.nid = d.id AND n.type = 'specimen_observation' AND n.status = 1
   AND d.language IN (n.language, 'und')
 
+UNION ALL
+
+-- Where a trait value came from: the taxon the inference bot took it from, the
+-- algorithm that calculated it from an annotation, or a note left by hand. The
+-- note is on the traits node, so it belongs to each of that node's values.
+SELECT 'traits', fci.item_id, 'inference_notes', x.delta,
+  x.field_inference_notes_value, CAST(NULL AS CHAR)
+FROM field_data_field_inference_notes x
+JOIN node n ON n.nid = x.entity_id AND n.type = 'bioacoustic_traits' AND n.status = 1
+  AND x.language IN (n.language, 'und')
+JOIN field_data_field_bioacoustic_traits h
+  ON h.entity_type = 'node' AND h.entity_id = n.nid AND h.deleted = 0
+JOIN field_collection_item fci
+  ON fci.item_id = h.field_bioacoustic_traits_value
+  AND fci.field_name = 'field_bioacoustic_traits' AND fci.archived = 0
+WHERE x.entity_type = 'node' AND x.deleted = 0
+  AND TRIM(COALESCE(x.field_inference_notes_value, '')) <> ''
+
 ORDER BY type, id, name, delta
