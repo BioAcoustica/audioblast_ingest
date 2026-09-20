@@ -27,7 +27,16 @@ humanSize <- function(bytes) {
 
 db <- bioacoustica()
 recordings <- exported(db, "recordings")
+lost <- lostTaxa(db, "recordings")
 dbDisconnect(db)
+
+#A recording of a term that has since been deleted has nothing to take a name
+#from, so its taxon is empty here and links.R gives it no taxon
+if (nrow(lost) > 0) {
+  message(nrow(lost), " recordings are of a term that is no longer in the ",
+          "classification:")
+  print(lost, row.names=FALSE)
+}
 
 recordings$file <- fileURL(recordings$file)
 recordings$size <- humanSize(recordings$size_raw)

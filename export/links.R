@@ -31,11 +31,20 @@ links <- exported(db, "links")
 topics <- dbGetQuery(db, "
   SELECT t.tid, t.name FROM taxonomy_term_data t
   JOIN taxonomy_vocabulary v ON v.vid = t.vid WHERE v.machine_name = 'non_bio'")
+lost <- lostTaxa(db)
 dbDisconnect(db)
 
 unmapped <- setdiff(links$content[!is.na(links$content)], contents$tid)
 if (length(unmapped) > 0) {
   stop("No term for the Biblio Contents terms ", paste(unmapped, collapse=", "))
+}
+
+#A record that names a term which has since been deleted is left with no taxon
+#to link it to, so the link is missing from links.csv altogether
+if (nrow(lost) > 0) {
+  message(nrow(lost), " records are of a term that is no longer in the classification, ",
+          "so they are given no link to a taxon:")
+  print(lost, row.names=FALSE)
 }
 
 #Topics are the site's Non-bio terms, named in UpperCamelCase, e.g. Marine
