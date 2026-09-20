@@ -8,10 +8,14 @@
 -- kit they were made with and the conditions they were made in; specimens give
 -- their numbers and field notes. Files are made into URLs by details.R, and
 -- values are otherwise as BioAcoustica holds them.
+--
+-- The unit each part starts with is cast to CHAR because a column that is NULL
+-- in every part of a UNION is a binary one, which comes back as raw bytes
+-- rather than as the text of the units that the other parts give.
 
 SELECT d.type, d.id, d.name, d.delta, d.value, d.unit FROM (
   SELECT 'recordings' AS type, x.entity_id AS id, 'tape' AS name, x.delta AS delta,
-         x.field_tape_value AS value, NULL AS unit, x.language AS language
+         x.field_tape_value AS value, CAST(NULL AS CHAR) AS unit, x.language AS language
     FROM field_data_field_tape x
    WHERE x.entity_type = 'node' AND x.bundle = 'recording' AND x.deleted = 0
      AND x.field_tape_value IS NOT NULL
@@ -231,7 +235,7 @@ UNION ALL
 
 SELECT d.type, d.id, d.name, d.delta, d.value, d.unit FROM (
   SELECT 'specimens' AS type, x.entity_id AS id, 'collector_number' AS name, x.delta AS delta,
-         x.field_collector_number_value AS value, NULL AS unit, x.language AS language
+         x.field_collector_number_value AS value, CAST(NULL AS CHAR) AS unit, x.language AS language
     FROM field_data_field_collector_number x
    WHERE x.entity_type = 'node' AND x.bundle = 'specimen_observation' AND x.deleted = 0
      AND x.field_collector_number_value IS NOT NULL
