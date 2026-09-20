@@ -91,6 +91,29 @@ WHERE tn.entity_type = 'node' AND tn.deleted = 0
 
 UNION ALL
 
+-- The taxa that specimens with no determination of their own were recorded as,
+-- so that a specimen is related to the taxon that specimens.sql names it with.
+-- The barcoding of the sound collection in the first half of 2017 left the
+-- determination of over a thousand specimens on the recordings they were made
+-- from, as specimens.sql says. A specimen keeps its own determination where it
+-- has one; one whose term is gone has nothing to be related to, so it too is
+-- taken from its recordings.
+SELECT 'specimens', sp.field_specimen_nid, 'http://rs.tdwg.org/dwc/iri/toTaxon',
+  'taxa', s.field_species_tid, NULL, NULL, NULL, NULL
+FROM field_data_field_specimen sp
+JOIN node n ON n.nid = sp.field_specimen_nid AND n.type = 'specimen_observation' AND n.status = 1
+JOIN node rn ON rn.nid = sp.entity_id AND rn.type = 'recording' AND rn.status = 1
+JOIN field_data_field_species s
+  ON s.entity_type = 'node' AND s.entity_id = rn.nid AND s.deleted = 0
+JOIN taxonomy_term_data t ON t.tid = s.field_species_tid
+WHERE sp.entity_type = 'node' AND sp.deleted = 0
+  AND NOT EXISTS (SELECT 1 FROM field_data_field_taxonomic_name tn
+                    JOIN taxonomy_term_data tt ON tt.tid = tn.field_taxonomic_name_tid
+                   WHERE tn.entity_type = 'node' AND tn.entity_id = n.nid
+                     AND tn.deleted = 0)
+
+UNION ALL
+
 -- Specimens cited in references
 SELECT 'specimens', c.entity_id, 'http://purl.org/dc/terms/isReferencedBy',
   'references', c.field_cited_in__nid, NULL, NULL, NULL, NULL
