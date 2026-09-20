@@ -29,6 +29,9 @@ contents <- data.frame(
   remarks=c("", "", "Alarm Call", "Wing Whistle", rep("", 14)),
   stringsAsFactors=FALSE)
 tagged <- "AcousticBehaviour"
+#The reference that a taxon's Classification entry cites treats the taxon,
+#whether or not it is the work that published its name
+treatment <- "TaxonomicTreatment"
 
 db <- dbConnect(RMariaDB::MariaDB(),
                 host=Sys.getenv("BIOACOUSTICA_HOST", "127.0.0.1"),
@@ -57,8 +60,8 @@ camel <- function(x) {
 }
 
 links$qualifier <- NA_character_
-about <- links$subject_type == "references" & links$object_type == "taxa"
-links$qualifier[about] <- paste0(content, tagged)
+links$qualifier[links$kind == "tagged"] <- paste0(content, tagged)
+links$qualifier[links$kind == "classification"] <- paste0(content, treatment)
 has <- !is.na(links$content)
 row <- match(links$content[has], contents$tid)
 links$qualifier[has] <- paste0(content, contents$term[row])
