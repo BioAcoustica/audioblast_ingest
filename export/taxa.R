@@ -79,10 +79,62 @@ taxa$taxon <- named
 #not say its parent is Mus Mus musculus
 #Ids are looked up by name, so they are matched as text: a root's parent is 0,
 #which as a number would be no position at all rather than no parent
-taxa$parent_taxon <- unname(setNames(named, as.character(taxa$id))[as.character(taxa$parent_id)])
+byID <- setNames(named, as.character(taxa$id))
+taxa$parent_taxon <- unname(byID[as.character(taxa$parent_id)])
 
+#Whether a name is the one in use. The site says valid or invalid and, for an
+#invalid one, why; the Darwin Core terms for that are taxonomicStatus and
+#nomenclaturalStatus, so the site's own reason is kept beside the status it
+#names. A recombination shares its type with the name that replaced it, so it
+#is a homotypic synonym however the site words it; a junior synonym does not,
+#so it is heterotypic. A name the site says nothing about gets no status
+#rather than being called accepted.
+status <- c("original name/combination"="homotypic synonym",
+            "subsequent name/combination"="homotypic synonym",
+            "objective synonym"="homotypic synonym",
+            "junior synonym"="heterotypic synonym",
+            "misapplied"="misapplied",
+            "nomen dubium"="doubtful",
+            "unavailable, literature misspelling"="invalid")
+usage <- ifelse(is.na(taxa$name_usage), "", taxa$name_usage)
+reason <- ifelse(is.na(taxa$unacceptability), "", taxa$unacceptability)
+
+#The name that replaced an invalid one. The site points most of them at it,
+#and every one of those but one points at the term's own parent, which is how
+#a synonym is filed. Where it points nowhere the parent is the accepted name
+#only if the parent is a species: the rest are filed under their genus, and a
+#genus is not the accepted name of a species.
+accepted <- ifelse(is.na(taxa$accepted_id), "", as.character(taxa$accepted_id))
+fromParent <- usage == "invalid" & accepted == "" & !is.na(taxa$parent_rank) &
+  taxa$parent_rank %in% c("Species", "Subspecies")
+accepted[fromParent] <- as.character(taxa$parent_id[fromParent])
+message(sum(fromParent), " invalid names take the name that replaced them from their parent, ",
+        "which the site did not record for them")
+
+#An accepted name on a name the site calls valid is not published: three terms
+#have one with no reason given, and there is nothing to say whether the usage
+#is wrong or the link is.
+accepted[usage != "invalid"] <- ""
+
+taxa$taxonomicStatus <- ifelse(usage == "valid", "accepted",
+                        ifelse(usage != "invalid", NA_character_,
+                        ifelse(reason %in% names(status), unname(status[reason]),
+                        ifelse(accepted != "", "synonym", "invalid"))))
+taxa$nomenclaturalStatus <- ifelse(usage == "invalid" & reason != "", reason, NA_character_)
+taxa$acceptedNameUsageID <- ifelse(accepted == "", NA_character_, accepted)
+taxa$acceptedNameUsage <- unname(byID[accepted])
+
+counts <- sort(table(ifelse(is.na(taxa$taxonomicStatus), "(none)", taxa$taxonomicStatus)),
+               decreasing=TRUE)
+print(data.frame(taxonomicStatus=names(counts), taxa=as.integer(counts)), row.names=FALSE)
+message(sum(!is.na(taxa$acceptedNameUsageID)), " names give the name that replaced them")
+
+taxa <- taxa[, c("id", "taxon", "unit1", "unit2", "unit3", "unit4", "rank", "parent_id",
+                 "parent_taxon", "taxonomicStatus", "nomenclaturalStatus",
+                 "acceptedNameUsageID", "acceptedNameUsage")]
 names(taxa) <- c("id", "taxon", "Unit name 1", "Unit name 2", "Unit name 3", "Unit name 4",
-                 "Rank", "parent_id", "parent_taxon")
+                 "Rank", "parent_id", "parent_taxon", "taxonomicStatus",
+                 "nomenclaturalStatus", "acceptedNameUsageID", "acceptedNameUsage")
 write_export(taxa, "taxa.txt")
 counts <- sort(table(taxa$Rank), decreasing=TRUE)
 print(data.frame(rank=names(counts), taxa=as.integer(counts)), row.names=FALSE)
