@@ -13,6 +13,7 @@ sexes <- c("male"="Male", "female"="Female", "Maleq"="Male", "Males"="Male",
 
 db <- bioacoustica()
 traits <- exported(db, "traits")
+lost <- lostTaxa(db, "traits")
 dbDisconnect(db)
 
 #The site's ontology links are typed by hand, so a few name the vocabulary's
@@ -48,6 +49,15 @@ several <- traits$taxa > 1
 if (any(several)) {
   message(sum(several), " trait values are of a node with several taxa, ",
           "whose other taxa are in links.csv")
+}
+
+#A trait value takes its name from the first taxon of its node and links.R
+#gives every one of them, so a value whose node names a term that has since
+#been deleted loses the name here, the link there, or both
+if (nrow(lost) > 0) {
+  message(nrow(lost), " trait values are of a term that is no longer in the ",
+          "classification:")
+  print(lost, row.names=FALSE)
 }
 
 traits$reference <- ""

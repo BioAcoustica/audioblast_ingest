@@ -31,6 +31,7 @@ links <- exported(db, "links")
 topics <- dbGetQuery(db, "
   SELECT t.tid, t.name FROM taxonomy_term_data t
   JOIN taxonomy_vocabulary v ON v.vid = t.vid WHERE v.machine_name = 'non_bio'")
+lost <- lostTaxa(db)
 #A species profile says which taxa it is about in a field, and cites its
 #references in the text, so its links are read from the descriptions export
 #rather than from links.sql
@@ -40,7 +41,7 @@ dbDisconnect(db)
 
 #One link for each taxon a description is about, and one for each reference it
 #cites. A reference that is no longer published is left out.
-about <- strsplit(ifelse(is.na(descriptions$taxa), "", descriptions$taxa), ",", fixed=TRUE)
+describes <- strsplit(ifelse(is.na(descriptions$taxa), "", descriptions$taxa), ",", fixed=TRUE)
 cited <- lapply(citations(descriptions$value), function(ids) intersect(ids, as.character(published)))
 missing <- setdiff(unlist(citations(descriptions$value)), as.character(published))
 if (length(missing) > 0) {
@@ -53,12 +54,20 @@ described <- function(ids, predicate, type) {
                     content=NA, topic=NA, remarks=NA, term=NA, stringsAsFactors=FALSE))
 }
 links <- rbind(links,
-               described(about, "http://purl.obolibrary.org/obo/IAO_0000136", "taxa"),
+               described(describes, "http://purl.obolibrary.org/obo/IAO_0000136", "taxa"),
                described(cited, "http://purl.org/dc/terms/source", "references"))
 
 unmapped <- setdiff(links$content[!is.na(links$content)], contents$tid)
 if (length(unmapped) > 0) {
   stop("No term for the Biblio Contents terms ", paste(unmapped, collapse=", "))
+}
+
+#A record that names a term which has since been deleted is left with no taxon
+#to link it to, so the link is missing from links.csv altogether
+if (nrow(lost) > 0) {
+  message(nrow(lost), " records are of a term that is no longer in the classification, ",
+          "so they are given no link to a taxon:")
+  print(lost, row.names=FALSE)
 }
 
 #Topics are the site's Non-bio terms, named in UpperCamelCase, e.g. Marine

@@ -11,11 +11,29 @@
 
 SELECT
   n.nid AS id,
+  -- The determination on the specimen, or else the species of the recordings of
+  -- it. The barcoding of the sound collection in the first half of 2017 gave
+  -- 1,074 specimens a record holding nothing but their catalogue number, with
+  -- the determination left on the recordings they were made from, where it
+  -- already was, so a specimen with none of its own is the species it was
+  -- recorded as. A recording names the specimen whether or not its audio is
+  -- there to export, as what the animal is does not depend on that, and where
+  -- the recordings of a specimen are of more than one species they are all
+  -- given, as neither is the determination.
+  COALESCE(
   (SELECT GROUP_CONCAT(t.name ORDER BY tn.delta SEPARATOR '; ')
      FROM field_data_field_taxonomic_name tn
      JOIN taxonomy_term_data t ON t.tid = tn.field_taxonomic_name_tid
     WHERE tn.entity_type = 'node' AND tn.entity_id = n.nid AND tn.deleted = 0
-      AND tn.language IN (n.language, 'und')) AS scientificName,
+      AND tn.language IN (n.language, 'und')),
+  (SELECT GROUP_CONCAT(DISTINCT t.name ORDER BY t.name SEPARATOR '; ')
+     FROM field_data_field_specimen sp
+     JOIN node rn ON rn.nid = sp.entity_id AND rn.type = 'recording' AND rn.status = 1
+     JOIN field_data_field_species s
+       ON s.entity_type = 'node' AND s.entity_id = rn.nid AND s.deleted = 0
+     JOIN taxonomy_term_data t ON t.tid = s.field_species_tid
+    WHERE sp.entity_type = 'node' AND sp.deleted = 0
+      AND sp.field_specimen_nid = n.nid)) AS scientificName,
   bor.field_basis_of_record_value AS basisOfRecord,
   ic.field_institution_code_value AS institutionCode,
   cc.field_collection_code_value AS collectionCode,

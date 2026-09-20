@@ -28,6 +28,17 @@ exported <- function(db, name) {
   return(dbGetQuery(db, paste(sql, collapse="\n")))
 }
 
+#The records that have lost a taxon to a deleted term, as export/lost-taxa.sql
+#finds them: the rows of one export where it is named, e.g. "specimens", and
+#all of them where it is not
+lostTaxa <- function(db, type=NULL) {
+  lost <- exported(db, "lost-taxa")
+  if (!is.null(type)) {
+    lost <- lost[lost$type == type, c("id", "tid")]
+  }
+  return(lost)
+}
+
 #URLs of files held in Drupal's public file system, with the parts of their
 #paths encoded as Drupal encodes them (e.g. a space is %20)
 fileURL <- function(uri) {
