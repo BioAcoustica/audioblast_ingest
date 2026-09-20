@@ -9,15 +9,18 @@
 -- everything about a taxon can be found by one predicate; a vernacular name
 -- denotes its taxon, which is a kind of being about it.
 --
--- What a reference holds about a taxon (content, or a term named here) and
--- its topics are given as Drupal term ids or term names; links.R replaces
--- them with the vocab.audioblast.org terms for them.
+-- What a reference holds about a taxon (content, or a term named here), its
+-- topics and how one taxon interacts with another are given as Drupal term ids
+-- or term names; links.R replaces them with the vocab.audioblast.org terms for
+-- them. A link that a reference established gives it, and audioBlastIngest
+-- makes a link of that too, so that what established a relationship is said of
+-- the relationship.
 
 -- References about taxa: the taxa that papers are tagged with
 SELECT 'references' AS subject_type, tn.entity_id AS subject_id,
   'http://purl.obolibrary.org/obo/IAO_0000136' AS predicate,
   'taxa' AS object_type, tn.field_taxonomic_name_tid AS object_id,
-  NULL AS content, NULL AS topic, NULL AS remarks, NULL AS term
+  NULL AS content, NULL AS topic, NULL AS remarks, NULL AS term, NULL AS reference, NULL AS interaction
 FROM field_data_field_taxonomic_name tn
 JOIN node n ON n.nid = tn.entity_id AND n.type = 'biblio' AND n.status = 1
 JOIN taxonomy_term_data t ON t.tid = tn.field_taxonomic_name_tid
@@ -28,7 +31,7 @@ UNION ALL
 -- What papers contain about taxa (their Contents: an oscillogram of a taxon,
 -- a description of its song...)
 SELECT 'references', c.entity_id, 'http://purl.obolibrary.org/obo/IAO_0000136',
-  'taxa', tn.field_taxonomic_name_tid, bc.field_biblio_contents_tid, NULL, NULL, NULL
+  'taxa', tn.field_taxonomic_name_tid, bc.field_biblio_contents_tid, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_contents c
 JOIN node n ON n.nid = c.entity_id AND n.type = 'biblio' AND n.status = 1
 JOIN field_data_field_biblio_contents bc
@@ -46,7 +49,7 @@ UNION ALL
 -- taxon, with the page the term gives as its remarks.
 SELECT 'references', f.field_reference_nid, 'http://purl.obolibrary.org/obo/IAO_0000136',
   'taxa', f.entity_id, NULL, NULL,
-  CONCAT('p. ', NULLIF(TRIM(p.field_page_number_value), '')), 'TaxonomicTreatment'
+  CONCAT('p. ', NULLIF(TRIM(p.field_page_number_value), '')), 'TaxonomicTreatment', NULL, NULL
 FROM field_data_field_reference f
 JOIN taxonomy_term_data t ON t.tid = f.entity_id
 JOIN node b ON b.nid = f.field_reference_nid AND b.type = 'biblio' AND b.status = 1
@@ -58,7 +61,7 @@ UNION ALL
 
 -- Recordings of taxa (their species)
 SELECT 'recordings', s.entity_id, 'http://purl.obolibrary.org/obo/IAO_0000136',
-  'taxa', s.field_species_tid, NULL, NULL, NULL, NULL
+  'taxa', s.field_species_tid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_species s
 JOIN node n ON n.nid = s.entity_id AND n.type = 'recording' AND n.status = 1
 JOIN field_data_field_recording fr
@@ -71,7 +74,7 @@ UNION ALL
 
 -- Recordings of specimens
 SELECT 'recordings', sp.entity_id, 'http://rs.tdwg.org/ac/terms/associatedSpecimenReference',
-  'specimens', sp.field_specimen_nid, NULL, NULL, NULL, NULL
+  'specimens', sp.field_specimen_nid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_specimen sp
 JOIN node n ON n.nid = sp.entity_id AND n.type = 'recording' AND n.status = 1
 JOIN field_data_field_recording fr
@@ -84,7 +87,7 @@ UNION ALL
 
 -- The taxa that specimens are identified as
 SELECT 'specimens', tn.entity_id, 'http://rs.tdwg.org/dwc/iri/toTaxon',
-  'taxa', tn.field_taxonomic_name_tid, NULL, NULL, NULL, NULL
+  'taxa', tn.field_taxonomic_name_tid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_taxonomic_name tn
 JOIN node n ON n.nid = tn.entity_id AND n.type = 'specimen_observation' AND n.status = 1
 JOIN taxonomy_term_data t ON t.tid = tn.field_taxonomic_name_tid
@@ -100,7 +103,7 @@ UNION ALL
 -- has one; one whose term is gone has nothing to be related to, so it too is
 -- taken from its recordings.
 SELECT 'specimens', sp.field_specimen_nid, 'http://rs.tdwg.org/dwc/iri/toTaxon',
-  'taxa', s.field_species_tid, NULL, NULL, NULL, NULL
+  'taxa', s.field_species_tid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_specimen sp
 JOIN node n ON n.nid = sp.field_specimen_nid AND n.type = 'specimen_observation' AND n.status = 1
 JOIN node rn ON rn.nid = sp.entity_id AND rn.type = 'recording' AND rn.status = 1
@@ -117,7 +120,7 @@ UNION ALL
 
 -- Specimens cited in references
 SELECT 'specimens', c.entity_id, 'http://purl.org/dc/terms/isReferencedBy',
-  'references', c.field_cited_in__nid, NULL, NULL, NULL, NULL
+  'references', c.field_cited_in__nid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_cited_in_ c
 JOIN node n ON n.nid = c.entity_id AND n.type = 'specimen_observation' AND n.status = 1
 JOIN node b ON b.nid = c.field_cited_in__nid AND b.type = 'biblio' AND b.status = 1
@@ -127,7 +130,7 @@ UNION ALL
 
 -- Trait values of taxa: the taxa of the traits node that a value belongs to
 SELECT 'traits', h.field_bioacoustic_traits_value, 'http://purl.obolibrary.org/obo/IAO_0000136',
-  'taxa', tn.field_taxonomic_name_tid, NULL, NULL, NULL, NULL
+  'taxa', tn.field_taxonomic_name_tid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_bioacoustic_traits h
 JOIN node n ON n.nid = h.entity_id AND n.status = 1
 JOIN field_data_field_taxonomic_name tn
@@ -139,7 +142,7 @@ UNION ALL
 
 -- Recordings published in references (e.g. on a CD, or in a paper)
 SELECT 'recordings', r.entity_id, 'http://purl.org/dc/terms/isReferencedBy',
-  'references', r.field_published_reference_nid, NULL, NULL, NULL, NULL
+  'references', r.field_published_reference_nid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_published_reference r
 JOIN node n ON n.nid = r.entity_id AND n.type = 'recording' AND n.status = 1
 JOIN field_data_field_recording fr
@@ -152,7 +155,7 @@ UNION ALL
 
 -- Trait values taken from references
 SELECT 'traits', f.entity_id, 'http://purl.org/dc/terms/source',
-  'references', f.field_reference_nid, NULL, NULL, NULL, NULL
+  'references', f.field_reference_nid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_reference f
 JOIN field_data_field_bioacoustic_traits h
   ON h.field_bioacoustic_traits_value = f.entity_id AND h.entity_type = 'node' AND h.deleted = 0
@@ -165,7 +168,7 @@ UNION ALL
 -- The places recordings were made. A place is described once, in
 -- locations.sql, however many records were made or collected there.
 SELECT 'recordings', l.entity_id, 'http://rs.tdwg.org/dwc/iri/inDescribedPlace',
-  'locations', l.field_recording_location_nid, NULL, NULL, NULL, NULL
+  'locations', l.field_recording_location_nid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_recording_location l
 JOIN node n ON n.nid = l.entity_id AND n.type = 'recording' AND n.status = 1
 JOIN field_data_field_recording fr
@@ -178,7 +181,7 @@ UNION ALL
 
 -- The places specimens were collected or observed
 SELECT 'specimens', l.entity_id, 'http://rs.tdwg.org/dwc/iri/inDescribedPlace',
-  'locations', l.field_location_nid, NULL, NULL, NULL, NULL
+  'locations', l.field_location_nid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_data_field_location l
 JOIN node n ON n.nid = l.entity_id AND n.type = 'specimen_observation' AND n.status = 1
 JOIN node p ON p.nid = l.field_location_nid AND p.type = 'location' AND p.status = 1
@@ -198,7 +201,7 @@ UNION ALL
 -- vernacularnames.sql gives it; one with no name, or whose term is gone, is
 -- left out, as it is there.
 SELECT 'vernacularnames', i.item_id, 'http://purl.obolibrary.org/obo/IAO_0000219',
-  'taxa', c.entity_id, NULL, NULL, NULL, NULL
+  'taxa', c.entity_id, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_collection_item i
 JOIN field_data_field_vernacular_name_collection c
   ON c.field_vernacular_name_collection_value = i.item_id
@@ -213,7 +216,7 @@ UNION ALL
 
 -- The references that vernacular names were taken from
 SELECT 'vernacularnames', i.item_id, 'http://purl.org/dc/terms/source',
-  'references', f.field_reference_nid, NULL, NULL, NULL, NULL
+  'references', f.field_reference_nid, NULL, NULL, NULL, NULL, NULL, NULL
 FROM field_collection_item i
 JOIN field_data_field_vernacular_name_collection c
   ON c.field_vernacular_name_collection_value = i.item_id
@@ -231,7 +234,37 @@ UNION ALL
 
 -- References about topics (the site's Non-bio terms, e.g. Soundscapes)
 SELECT 'references', f.entity_id, 'http://purl.obolibrary.org/obo/IAO_0000136',
-  'term', NULL, NULL, f.field_non_biological_tid, NULL, NULL
+  'term', NULL, NULL, f.field_non_biological_tid, NULL, NULL, NULL, NULL
 FROM field_data_field_non_biological f
 JOIN node n ON n.nid = f.entity_id AND n.type = 'biblio' AND n.status = 1
 WHERE f.entity_type = 'node' AND f.deleted = 0
+
+UNION ALL
+
+-- How one taxon interacts with another: the acoustically orientating predators
+-- and parasites that find their prey and hosts by listening for them, and the
+-- taxa that answer another's alarm call. An interaction node names the taxon
+-- that acts and the reference it was read from, and the taxa acted upon are the
+-- items of its collection. Both taxa are named as the site names them, which is
+-- why they are not the interaction's own record: the relationship is all there
+-- is to say.
+SELECT 'taxa', tn.field_taxonomic_name_tid, 'placeholder',
+  'taxa', otn.field_taxonomic_name_tid, NULL, NULL, NULL, NULL,
+  f.field_reference_nid, it.name
+FROM node n
+JOIN field_data_field_taxonomic_name tn
+  ON tn.entity_type = 'node' AND tn.entity_id = n.nid AND tn.deleted = 0 AND tn.delta = 0
+JOIN taxonomy_term_data st ON st.tid = tn.field_taxonomic_name_tid
+JOIN field_data_field_interaction_type ity
+  ON ity.entity_type = 'node' AND ity.entity_id = n.nid AND ity.deleted = 0
+JOIN taxonomy_term_data it ON it.tid = ity.field_interaction_type_tid
+JOIN field_data_field_int_collection ic
+  ON ic.entity_type = 'node' AND ic.entity_id = n.nid AND ic.deleted = 0
+JOIN field_data_field_taxonomic_name otn
+  ON otn.entity_type = 'field_collection_item' AND otn.entity_id = ic.field_int_collection_value
+  AND otn.deleted = 0
+JOIN taxonomy_term_data ot ON ot.tid = otn.field_taxonomic_name_tid
+LEFT JOIN field_data_field_reference f
+  ON f.entity_type = 'node' AND f.entity_id = n.nid AND f.deleted = 0
+LEFT JOIN node b ON b.nid = f.field_reference_nid AND b.type = 'biblio' AND b.status = 1
+WHERE n.type = 'ecological_interactions' AND n.status = 1

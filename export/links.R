@@ -8,6 +8,17 @@ source("export/common.R")
 
 content <- "https://vocab.audioblast.org/cv/referenceContent#"
 topic <- "https://vocab.audioblast.org/cv/topic#"
+interaction <- "https://vocab.audioblast.org/cv/interaction#"
+
+#How one taxon interacts with another, for each of the site's Ecological
+#Interactions terms that its interactions use. The rest of that vocabulary is
+#the Relation Ontology's biotic interactions (eats, pollinates, is parasite of,
+#parasitoid of, is vector for), which should take their RO IRIs when something
+#uses them; these three are the site's own and have none.
+interactions <- c(
+  "acoustically-orientating predator of"="AcousticallyOrientatingPredatorOf",
+  "acoustically-orientating parasite of"="AcousticallyOrientatingParasiteOf",
+  "responds to alarm call of"="RespondsToAlarmCallOf")
 
 #The term for what a reference contains about a taxon, for each of the site's
 #Biblio Contents terms. A spectrogram of a call type gives the call type as
@@ -51,7 +62,8 @@ if (length(missing) > 0) {
 described <- function(ids, predicate, type) {
   return(data.frame(subject_type="descriptions", subject_id=rep(descriptions$id, lengths(ids)),
                     predicate=predicate, object_type=type, object_id=unlist(ids),
-                    content=NA, topic=NA, remarks=NA, term=NA, stringsAsFactors=FALSE))
+                    content=NA, topic=NA, remarks=NA, term=NA, reference=NA, interaction=NA,
+                    stringsAsFactors=FALSE))
 }
 links <- rbind(links,
                described(describes, "http://purl.obolibrary.org/obo/IAO_0000136", "taxa"),
@@ -61,6 +73,14 @@ unmapped <- setdiff(links$content[!is.na(links$content)], contents$tid)
 if (length(unmapped) > 0) {
   stop("No term for the Biblio Contents terms ", paste(unmapped, collapse=", "))
 }
+
+#An interaction is the relationship itself, so its term is the predicate
+acts <- !is.na(links$interaction)
+unnamed <- setdiff(links$interaction[acts], names(interactions))
+if (length(unnamed) > 0) {
+  stop("No term for the interactions ", paste(unnamed, collapse=", "))
+}
+links$predicate[acts] <- paste0(interaction, interactions[links$interaction[acts]])
 
 #A record that names a term which has since been deleted is left with no taxon
 #to link it to, so the link is missing from links.csv altogether
@@ -97,7 +117,8 @@ links$object_id[on] <- paste0(topic, camel(topics$name[match(links$topic[on], to
 links$subject_source <- ""
 links$object_source <- ""
 columns <- c("subject_type", "subject_source", "subject_id", "predicate",
-             "object_type", "object_source", "object_id", "qualifier", "remarks")
+             "object_type", "object_source", "object_id", "qualifier", "remarks",
+             "reference")
 links <- links[, columns]
 links[] <- lapply(links, function(x) ifelse(is.na(x), "", trimws(as.character(x))))
 links <- unique(links)
@@ -108,5 +129,6 @@ write_export(links, "links.csv")
 print(as.data.frame(table(paste(links$subject_type, sub(".*[/#]", "", links$predicate), links$object_type)),
                     responseName="links"), row.names=FALSE)
 message("vocab.audioblast.org terms used:")
-terms <- sort(unique(c(links$qualifier, links$object_id[links$object_type == "term"])))
+terms <- sort(unique(c(links$qualifier, links$object_id[links$object_type == "term"],
+                       links$predicate[startsWith(links$predicate, interaction)])))
 writeLines(terms[terms != ""])
