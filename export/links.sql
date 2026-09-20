@@ -1,13 +1,14 @@
 -- Links between BioAcoustica's records, from the Drupal database, for
 -- audioBLAST!'s links table (see getHeaders("links") in audioBlastIngest).
 -- Records are identified by their type (data module) and their id at
--- bio.acousti.ca: references, recordings and specimens by node id, traits and
--- vernacular names by the id of their field collection item (for traits the
--- traitID of traits.txt) and taxa by term id. Only links between published
--- nodes, and to taxa that still exist, are given. References, recordings,
--- trait values and specimens are all about taxa (IAO "is about"), so
--- everything about a taxon can be found by one predicate; a vernacular name
--- denotes its taxon, which is a kind of being about it.
+-- bio.acousti.ca: references, recordings, specimens and onomatopoeia by node
+-- id, traits and vernacular names by the id of their field collection item
+-- (for traits the traitID of traits.txt) and taxa by term id. Only links
+-- between published nodes, and to taxa that still exist, are given.
+-- References, recordings, trait values, specimens and onomatopoeia are all
+-- about taxa (IAO "is about"), so everything about a taxon can be found by one
+-- predicate; a vernacular name denotes its taxon, which is a kind of being
+-- about it.
 --
 -- What a reference holds about a taxon (content, or a term named here), its
 -- topics and how one taxon interacts with another are given as Drupal term ids
@@ -229,6 +230,35 @@ JOIN field_data_field_reference f
   ON f.entity_type = 'field_collection_item' AND f.entity_id = i.item_id AND f.deleted = 0
 JOIN node b ON b.nid = f.field_reference_nid AND b.type = 'biblio' AND b.status = 1
 WHERE i.field_name = 'field_vernacular_name_collection' AND i.archived = 0
+
+UNION ALL
+
+-- The taxa whose sounds onomatopoeia and imitations render. A rendering is
+-- about its taxon rather than denoting it: "bark" picks out the sound a dog
+-- makes, not the dog, and "Get the beer check" is a way of remembering a song
+-- rather than anything the bird is called. Denoting is what a vernacular name
+-- does and what reads a name onto its taxon, so being about the taxon is both
+-- the true relation and what keeps these out of the names a taxon is known by.
+SELECT 'onomatopoeia', n.nid, 'http://purl.obolibrary.org/obo/IAO_0000136',
+  'taxa', tn.field_taxonomic_name_tid, NULL, NULL, NULL, NULL, NULL, NULL
+FROM node n
+JOIN field_data_field_taxonomic_name tn
+  ON tn.entity_type = 'node' AND tn.entity_id = n.nid AND tn.deleted = 0
+JOIN taxonomy_term_data t ON t.tid = tn.field_taxonomic_name_tid
+WHERE n.type = 'onomatopoeia_or_imitation' AND n.status = 1
+  AND TRIM(COALESCE(n.title, '')) <> ''
+
+UNION ALL
+
+-- The references that onomatopoeia and imitations were taken from
+SELECT 'onomatopoeia', n.nid, 'http://purl.org/dc/terms/source',
+  'references', f.field_reference_nid, NULL, NULL, NULL, NULL, NULL, NULL
+FROM node n
+JOIN field_data_field_reference f
+  ON f.entity_type = 'node' AND f.entity_id = n.nid AND f.deleted = 0
+JOIN node b ON b.nid = f.field_reference_nid AND b.type = 'biblio' AND b.status = 1
+WHERE n.type = 'onomatopoeia_or_imitation' AND n.status = 1
+  AND TRIM(COALESCE(n.title, '')) <> ''
 
 UNION ALL
 
