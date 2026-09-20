@@ -5754,7 +5754,7 @@
 "6163","Leptophyes sicula","Leptophyes","sicula","","","Species","170","Leptophyes"
 "6164","Mongolotettix fujianensis","Mongolotettix","fujianensis","","","Species","3759","Mongolotettix"
 "6165","Notonectidae","Notonectidae","","","","Family","35","Hemiptera"
-"6166","Notonecta lutea","Notonecta","lutea","","","Species","6165","Notonectidae"
+"6166","Notonecta lutea","Notonecta","lutea","","","Species","8306","Notonecta"
 "6167","Rhantus frontalis","Rhantus","frontalis","","","Species","6173","Colymbetini"
 "6168","Corixa","Corixa","","","","Genus","584","Corixidae"
 "6169","Hydroporinae","Hydroporinae","","","","Subfamily","716","Dytiscidae"
@@ -7330,3 +7330,4 @@
 "8303","Litoria","Litoria","","","","Genus","1793","Hylidae"
 "8304","Litoria latopalmata","Litoria","latopalmata","","","Species","8303","Litoria"
 "8305","Litoria peronii","Litoria","peronii","","","Species","8303","Litoria"
+"8306","Notonecta","Notonecta","","","","Genus","6165","Notonectidae"
