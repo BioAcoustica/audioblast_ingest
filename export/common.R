@@ -51,6 +51,21 @@ fileURL <- function(uri) {
   return(out)
 }
 
+#The licence each of the Creative Commons module's licence types means (see
+#creative_commons.module in Scratchpads), which recordings and images are both
+#given. Type 1 is no licence, which is left empty, and the site gives the
+#licences in their 4.0 version.
+ccLicence <- function(type) {
+  licences <- c(
+    "2"="by", "3"="by-sa", "4"="by-nd", "5"="by-nc", "6"="by-nc-sa", "7"="by-nc-nd")
+  public <- c("8"="publicdomain/zero/1.0", "9"="publicdomain/mark/1.0")
+  type <- as.character(type)
+  return(ifelse(type %in% names(licences),
+                paste0("https://creativecommons.org/licenses/", licences[type], "/4.0/"),
+                ifelse(type %in% names(public),
+                       paste0("https://creativecommons.org/", public[type], "/"), NA)))
+}
+
 #The node ids of the references a text cites, as the site writes them in it:
 #[bib]12290[/bib]. A text that cites none gives none.
 citations <- function(text) {

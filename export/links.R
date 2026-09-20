@@ -69,6 +69,19 @@ links <- rbind(links,
                described(describes, "http://purl.obolibrary.org/obo/IAO_0000136", "taxa"),
                described(cited, "http://purl.org/dc/terms/source", "references"))
 
+#A profile's figures illustrate everything the profile says, so links.sql gives
+#the profile node and each of the descriptions descriptions.sql numbers after
+#that node (12289, 12289.2) takes a link. A profile with nothing to say has no
+#description for its figures to illustrate.
+illustrated <- links$subject_type == "images" & links$object_type == "descriptions"
+if (any(illustrated)) {
+  profile <- split(descriptions$id, sub("\\..*", "", descriptions$id))
+  ids <- profile[as.character(links$object_id[illustrated])]
+  figures <- links[illustrated, ][rep(seq_len(sum(illustrated)), lengths(ids)), ]
+  figures$object_id <- unlist(ids)
+  links <- rbind(links[!illustrated, ], figures)
+}
+
 unmapped <- setdiff(links$content[!is.na(links$content)], contents$tid)
 if (length(unmapped) > 0) {
   stop("No term for the Biblio Contents terms ", paste(unmapped, collapse=", "))

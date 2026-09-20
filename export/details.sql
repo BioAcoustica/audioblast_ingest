@@ -6,8 +6,12 @@
 --
 -- Recordings give the tapes, CDs and tracks of the NHM Sound Collection, the
 -- kit they were made with and the conditions they were made in; specimens give
--- their numbers and field notes. Files are made into URLs by details.R, and
--- values are otherwise as BioAcoustica holds them.
+-- their numbers and field notes. Values are as BioAcoustica holds them.
+--
+-- The scans of a recording's original metadata sheet and paper traces were
+-- details here, as bare URLs that said nothing about who may use them. They
+-- are images now (see images.sql), with their licences, and a link from each
+-- image to the recordings it documents.
 --
 -- The unit each part starts with is cast to CHAR because a column that is NULL
 -- in every part of a UNION is a binary one, which comes back as raw bytes
@@ -171,16 +175,6 @@ SELECT d.type, d.id, d.name, d.delta, d.value, d.unit FROM (
   SELECT 'recordings', x.entity_id, 'project', x.delta, t.name, NULL, x.language
     FROM field_data_field_project x
     JOIN taxonomy_term_data t ON t.tid = x.field_project_tid
-   WHERE x.entity_type = 'node' AND x.bundle = 'recording' AND x.deleted = 0
-  UNION ALL
-  SELECT 'recordings', x.entity_id, 'original_metadata_image', x.delta, f.uri, NULL, x.language
-    FROM field_data_field_original_metadata_image x
-    JOIN file_managed f ON f.fid = x.field_original_metadata_image_fid
-   WHERE x.entity_type = 'node' AND x.bundle = 'recording' AND x.deleted = 0
-  UNION ALL
-  SELECT 'recordings', x.entity_id, 'original_trace_image', x.delta, f.uri, NULL, x.language
-    FROM field_data_field_original_trace_images x
-    JOIN file_managed f ON f.fid = x.field_original_trace_images_fid
    WHERE x.entity_type = 'node' AND x.bundle = 'recording' AND x.deleted = 0
   UNION ALL
   SELECT 'recordings', mps.entity_id, 'microphone_power_supply', mps.delta, x.field_microphone_power_value, NULL, mps.language

@@ -3,12 +3,12 @@
 -- Records are identified by their type (data module) and their id at
 -- bio.acousti.ca: references, recordings, specimens and onomatopoeia by node
 -- id, traits and vernacular names by the id of their field collection item
--- (for traits the traitID of traits.txt) and taxa by term id. Only links
--- between published nodes, and to taxa that still exist, are given.
--- References, recordings, trait values, specimens and onomatopoeia are all
--- about taxa (IAO "is about"), so everything about a taxon can be found by one
--- predicate; a vernacular name denotes its taxon, which is a kind of being
--- about it.
+-- (for traits the traitID of traits.txt), images by file id and taxa by term
+-- id. Only links between published nodes, and to taxa that still exist, are
+-- given. References, recordings, trait values, specimens, images and
+-- onomatopoeia are all about taxa (IAO "is about"), so everything about a
+-- taxon can be found by one predicate; a vernacular name denotes its taxon,
+-- which is a kind of being about it.
 --
 -- What a reference holds about a taxon (content, or a term named here), its
 -- topics and how one taxon interacts with another are given as Drupal term ids
@@ -298,3 +298,101 @@ LEFT JOIN field_data_field_reference f
   ON f.entity_type = 'node' AND f.entity_id = n.nid AND f.deleted = 0
 LEFT JOIN node b ON b.nid = f.field_reference_nid AND b.type = 'biblio' AND b.status = 1
 WHERE n.type = 'ecological_interactions' AND n.status = 1
+
+UNION ALL
+
+-- The recordings whose original metadata sheets were scanned. A scan is
+-- about the recording it documents, and one sheet often covers several
+-- recordings, which is why the image is a record of its own (see images.sql)
+-- rather than a value on each recording.
+SELECT 'images', x.field_original_metadata_image_fid,
+  'http://purl.obolibrary.org/obo/IAO_0000136',
+  'recordings', x.entity_id, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_original_metadata_image x
+JOIN node n ON n.nid = x.entity_id AND n.type = 'recording' AND n.status = 1
+JOIN field_data_field_recording fr
+  ON fr.entity_type = 'node' AND fr.entity_id = n.nid AND fr.deleted = 0 AND fr.delta = 0
+JOIN file_managed fm ON fm.fid = fr.field_recording_fid
+JOIN file_managed f ON f.fid = x.field_original_metadata_image_fid
+  AND f.type = 'image' AND f.status = 1
+WHERE x.entity_type = 'node' AND x.deleted = 0
+
+UNION ALL
+
+-- The recordings whose paper oscillographic traces were scanned
+SELECT 'images', x.field_original_trace_images_fid,
+  'http://purl.obolibrary.org/obo/IAO_0000136',
+  'recordings', x.entity_id, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_original_trace_images x
+JOIN node n ON n.nid = x.entity_id AND n.type = 'recording' AND n.status = 1
+JOIN field_data_field_recording fr
+  ON fr.entity_type = 'node' AND fr.entity_id = n.nid AND fr.deleted = 0 AND fr.delta = 0
+JOIN file_managed fm ON fm.fid = fr.field_recording_fid
+JOIN file_managed f ON f.fid = x.field_original_trace_images_fid
+  AND f.type = 'image' AND f.status = 1
+WHERE x.entity_type = 'node' AND x.deleted = 0
+
+UNION ALL
+
+-- The specimens that images show
+SELECT 'images', x.field_media_fid,
+  'http://rs.tdwg.org/ac/terms/associatedSpecimenReference',
+  'specimens', x.entity_id, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_media x
+JOIN node n ON n.nid = x.entity_id AND n.type = 'specimen_observation' AND n.status = 1
+JOIN file_managed f ON f.fid = x.field_media_fid AND f.type = 'image' AND f.status = 1
+WHERE x.entity_type = 'node' AND x.deleted = 0
+
+UNION ALL
+
+-- The places that images were taken in
+SELECT 'images', x.field_images_fid, 'http://rs.tdwg.org/dwc/iri/inDescribedPlace',
+  'locations', x.entity_id, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_images x
+JOIN node n ON n.nid = x.entity_id AND n.type = 'location' AND n.status = 1
+JOIN file_managed f ON f.fid = x.field_images_fid AND f.type = 'image' AND f.status = 1
+WHERE x.entity_type = 'node' AND x.deleted = 0
+
+UNION ALL
+
+-- The species profiles that images illustrate. The object here is the profile
+-- node, and links.R makes it the descriptions that descriptions.sql numbers
+-- after that node, because a profile's figures illustrate everything it says.
+SELECT 'images', x.field_media_fid, 'http://purl.obolibrary.org/obo/IAO_0000136',
+  'descriptions', x.entity_id, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_media x
+JOIN node n ON n.nid = x.entity_id AND n.type = 'spm' AND n.status = 1
+JOIN file_managed f ON f.fid = x.field_media_fid AND f.type = 'image' AND f.status = 1
+WHERE x.entity_type = 'node' AND x.deleted = 0
+
+UNION ALL
+
+-- The references that images were attached to
+SELECT 'images', x.field_file_fid, 'http://purl.org/dc/terms/source',
+  'references', x.entity_id, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_file x
+JOIN node n ON n.nid = x.entity_id AND n.type = 'biblio' AND n.status = 1
+JOIN file_managed f ON f.fid = x.field_file_fid AND f.type = 'image' AND f.status = 1
+WHERE x.entity_type = 'node' AND x.deleted = 0
+
+UNION ALL
+
+-- The papers that figures were taken from. A file's fields have a row for
+-- each of the site's fifteen interface languages, all saying the same thing,
+-- so each value is taken once.
+SELECT DISTINCT 'images', x.entity_id, 'http://purl.org/dc/terms/source',
+  'references', x.field_reference_nid, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_reference x
+JOIN file_managed f ON f.fid = x.entity_id AND f.type = 'image' AND f.status = 1
+JOIN node b ON b.nid = x.field_reference_nid AND b.type = 'biblio' AND b.status = 1
+WHERE x.entity_type = 'file' AND x.deleted = 0
+
+UNION ALL
+
+-- The taxa that images show
+SELECT DISTINCT 'images', x.entity_id, 'http://purl.obolibrary.org/obo/IAO_0000136',
+  'taxa', x.field_taxonomic_name_tid, NULL, NULL, NULL, NULL, NULL, NULL
+FROM field_data_field_taxonomic_name x
+JOIN file_managed f ON f.fid = x.entity_id AND f.type = 'image' AND f.status = 1
+JOIN taxonomy_term_data t ON t.tid = x.field_taxonomic_name_tid AND t.vid = 4
+WHERE x.entity_type = 'file' AND x.deleted = 0
