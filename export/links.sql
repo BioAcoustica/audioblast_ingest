@@ -1,12 +1,13 @@
 -- Links between BioAcoustica's records, from the Drupal database, for
 -- audioBLAST!'s links table (see getHeaders("links") in audioBlastIngest).
 -- Records are identified by their type (data module) and their id at
--- bio.acousti.ca: references, recordings and specimens by node id, traits by
--- the id of their field collection item (the traitID of traits.txt) and taxa
--- by term id. Only links between published nodes, and to taxa that still
--- exist, are given. References, recordings, trait values and specimens are
--- all about taxa (IAO "is about"), so everything about a taxon can be found
--- by one predicate.
+-- bio.acousti.ca: references, recordings and specimens by node id, traits and
+-- vernacular names by the id of their field collection item (for traits the
+-- traitID of traits.txt) and taxa by term id. Only links between published
+-- nodes, and to taxa that still exist, are given. References, recordings,
+-- trait values and specimens are all about taxa (IAO "is about"), so
+-- everything about a taxon can be found by one predicate; a vernacular name
+-- denotes its taxon, which is a kind of being about it.
 --
 -- What a reference holds about a taxon (content, or a term named here) and
 -- its topics are given as Drupal term ids or term names; links.R replaces
@@ -182,6 +183,49 @@ FROM field_data_field_location l
 JOIN node n ON n.nid = l.entity_id AND n.type = 'specimen_observation' AND n.status = 1
 JOIN node p ON p.nid = l.field_location_nid AND p.type = 'location' AND p.status = 1
 WHERE l.entity_type = 'node' AND l.deleted = 0
+
+UNION ALL
+
+-- The taxa that vernacular names name. Darwin Core has no property that takes
+-- a taxon for a vernacular name (dwc:vernacularName takes the name itself),
+-- and dwc:relationshipOfResourceID asks for an OBO relation, so the predicate
+-- is IAO "denotes": a name is made to pick out the thing it names, which is
+-- what denotation is. It is a subproperty of IAO "is about", so a vernacular
+-- name is still about its taxon, as everything else linked to one is.
+--
+-- A vernacular name is a Vernacular Name field collection item of a
+-- classification term, identified by the id of that item, as
+-- vernacularnames.sql gives it; one with no name, or whose term is gone, is
+-- left out, as it is there.
+SELECT 'vernacularnames', i.item_id, 'http://purl.obolibrary.org/obo/IAO_0000219',
+  'taxa', c.entity_id, NULL, NULL, NULL, NULL
+FROM field_collection_item i
+JOIN field_data_field_vernacular_name_collection c
+  ON c.field_vernacular_name_collection_value = i.item_id
+  AND c.entity_type = 'taxonomy_term' AND c.deleted = 0
+JOIN taxonomy_term_data t ON t.tid = c.entity_id
+JOIN field_data_field_vernacular_name vn
+  ON vn.entity_type = 'field_collection_item' AND vn.entity_id = i.item_id AND vn.deleted = 0
+  AND TRIM(vn.field_vernacular_name_value) <> ''
+WHERE i.field_name = 'field_vernacular_name_collection' AND i.archived = 0
+
+UNION ALL
+
+-- The references that vernacular names were taken from
+SELECT 'vernacularnames', i.item_id, 'http://purl.org/dc/terms/source',
+  'references', f.field_reference_nid, NULL, NULL, NULL, NULL
+FROM field_collection_item i
+JOIN field_data_field_vernacular_name_collection c
+  ON c.field_vernacular_name_collection_value = i.item_id
+  AND c.entity_type = 'taxonomy_term' AND c.deleted = 0
+JOIN taxonomy_term_data t ON t.tid = c.entity_id
+JOIN field_data_field_vernacular_name vn
+  ON vn.entity_type = 'field_collection_item' AND vn.entity_id = i.item_id AND vn.deleted = 0
+  AND TRIM(vn.field_vernacular_name_value) <> ''
+JOIN field_data_field_reference f
+  ON f.entity_type = 'field_collection_item' AND f.entity_id = i.item_id AND f.deleted = 0
+JOIN node b ON b.nid = f.field_reference_nid AND b.type = 'biblio' AND b.status = 1
+WHERE i.field_name = 'field_vernacular_name_collection' AND i.archived = 0
 
 UNION ALL
 
