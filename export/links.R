@@ -1,14 +1,10 @@
-# Exports links between BioAcoustica's records (references, taxa, recordings
-# and traits) as links.csv for audioBlastIngest, from a MariaDB (or MySQL)
-# copy of the bio.acousti.ca database. Run it from the root of this
-# repository:
-#
-#   Rscript export/links.R
-#
-# The database is found as export/references.R finds it. What a reference
-# contains about a taxon (e.g. an oscillogram of it) and the topics of
-# references are given as vocab.audioblast.org terms, which the script lists.
-library(DBI)
+# Exports links between BioAcoustica's records (references, taxa, recordings,
+# traits and specimens) as links.csv for audioBlastIngest, from a copy of the
+# bio.acousti.ca database. See export/common.R for how the database is found
+# and how to run this. What a reference contains about a taxon (e.g. an
+# oscillogram of it) and the topics of references are given as
+# vocab.audioblast.org terms, which the script lists.
+source("export/common.R")
 
 content <- "https://vocab.audioblast.org/cv/referenceContent#"
 topic <- "https://vocab.audioblast.org/cv/topic#"
@@ -30,13 +26,8 @@ contents <- data.frame(
   stringsAsFactors=FALSE)
 tagged <- "AcousticBehaviour"
 
-db <- dbConnect(RMariaDB::MariaDB(),
-                host=Sys.getenv("BIOACOUSTICA_HOST", "127.0.0.1"),
-                port=as.integer(Sys.getenv("BIOACOUSTICA_PORT", "3306")),
-                user=Sys.getenv("BIOACOUSTICA_USER", "root"),
-                password=Sys.getenv("BIOACOUSTICA_PASSWORD", ""),
-                dbname=Sys.getenv("BIOACOUSTICA_DB", "bioacoustica"))
-links <- dbGetQuery(db, paste(readLines("export/links.sql", encoding="UTF-8"), collapse="\n"))
+db <- bioacoustica()
+links <- exported(db, "links")
 topics <- dbGetQuery(db, "
   SELECT t.tid, t.name FROM taxonomy_term_data t
   JOIN taxonomy_vocabulary v ON v.vid = t.vid WHERE v.machine_name = 'non_bio'")
@@ -78,12 +69,7 @@ links <- unique(links)
 links <- links[order(links$subject_type, as.numeric(links$subject_id), links$predicate,
                      links$object_type, links$object_id, links$qualifier), ]
 
-#Every value is quoted, as in BioAcoustica's other exports
-csv <- file("links.csv", "wb")
-write.csv(links, csv, row.names=FALSE, eol="\r\n")
-close(csv)
-
-message(nrow(links), " links written to links.csv")
+write_export(links, "links.csv")
 print(as.data.frame(table(paste(links$subject_type, sub(".*[/#]", "", links$predicate), links$object_type)),
                     responseName="links"), row.names=FALSE)
 message("vocab.audioblast.org terms used:")
