@@ -54,6 +54,9 @@ has <- !is.na(links$content)
 row <- match(links$content[has], contents$tid)
 links$qualifier[has] <- paste0(content, contents$term[row])
 links$remarks[has] <- contents$remarks[row]
+#Links that name their own term, e.g. the references that treat a taxon
+named <- !is.na(links$term)
+links$qualifier[named] <- paste0(content, links$term[named])
 on <- !is.na(links$topic)
 links$object_id[on] <- paste0(topic, camel(topics$name[match(links$topic[on], topics$tid)]))
 
