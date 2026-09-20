@@ -40,6 +40,23 @@ fileURL <- function(uri) {
   return(out)
 }
 
+#The node ids of the references a text cites, as the site writes them in it:
+#[bib]12290[/bib]. A text that cites none gives none.
+citations <- function(text) {
+  return(regmatches(text, gregexpr("(?<=\\[bib\\])[0-9]+(?=\\[/bib\\])", text, perl=TRUE)))
+}
+
+#Text without the citations in it, and without the brackets that were only
+#there to hold them: "in hill-streams ([bib]1[/bib], [bib]2[/bib])." reads "in
+#hill-streams." once the citations are links of their own
+citationsOut <- function(text) {
+  out <- gsub("\\[bib\\][0-9]+\\[/bib\\]", "", text)
+  out <- gsub("\\(\\s*(?:(?:and|&|[,;])\\s*)*\\)", "", out, perl=TRUE)
+  out <- gsub("[ \t]+([.,;:)])", "\\1", out)
+  out <- gsub("[ \t]{2,}", " ", out)
+  return(trimws(out))
+}
+
 #Writes the file that audioBlastIngest reads: every value quoted, as in
 #BioAcoustica's other exports, with nothing for the values a record lacks
 write_export <- function(data, file) {
