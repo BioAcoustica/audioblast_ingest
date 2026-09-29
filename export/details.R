@@ -6,7 +6,11 @@ source("export/common.R")
 
 db <- bioacoustica()
 details <- exported(db, "details")
+held <- withheld(db)
 dbDisconnect(db)
+
+#Nothing of a recording that is withheld (see export/withheld.sql)
+details <- details[!(details$type == "recordings" & details$id %in% held), ]
 
 write_export(details, "details.csv")
 counts <- sort(table(details$name), decreasing=TRUE)

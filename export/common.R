@@ -33,10 +33,19 @@ exported <- function(db, name) {
 #all of them where it is not
 lostTaxa <- function(db, type=NULL) {
   lost <- exported(db, "lost-taxa")
+  #A withheld recording is not exported, so there is nothing of it to lose
+  lost <- lost[!(lost$type == "recordings" & lost$id %in% withheld(db)), ]
   if (!is.null(type)) {
     lost <- lost[lost$type == type, c("id", "tid")]
   }
   return(lost)
+}
+
+#The ids of the recordings that no export gives, as export/withheld.sql finds
+#them. Every export that gives recordings, or anything of them, leaves these
+#out.
+withheld <- function(db) {
+  return(as.character(exported(db, "withheld")$id))
 }
 
 #URLs of files held in Drupal's public file system, with the parts of their

@@ -21,7 +21,12 @@ humanSize <- function(bytes) {
 db <- bioacoustica()
 recordings <- exported(db, "recordings")
 lost <- lostTaxa(db, "recordings")
+held <- withheld(db)
 dbDisconnect(db)
+
+#Recordings that are not BioAcoustica's to share (see export/withheld.sql)
+recordings <- recordings[!(recordings$id %in% held), ]
+message(length(held), " recordings are withheld")
 
 #A recording of a term that has since been deleted has nothing to take a name
 #from, so its taxon is empty here and links.R gives it no taxon

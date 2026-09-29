@@ -48,6 +48,7 @@ lost <- lostTaxa(db)
 #rather than from links.sql
 descriptions <- exported(db, "descriptions")
 published <- dbGetQuery(db, "SELECT nid FROM node WHERE type = 'biblio' AND status = 1")$nid
+held <- withheld(db)
 dbDisconnect(db)
 
 #One link for each taxon a description is about, and one for each reference it
@@ -134,6 +135,9 @@ columns <- c("subject_type", "subject_source", "subject_id", "predicate",
              "reference")
 links <- links[, columns]
 links[] <- lapply(links, function(x) ifelse(is.na(x), "", trimws(as.character(x))))
+#No link to or from a recording that is withheld (see export/withheld.sql)
+links <- links[!((links$subject_type == "recordings" & links$subject_id %in% held) |
+                 (links$object_type == "recordings" & links$object_id %in% held)), ]
 links <- unique(links)
 links <- links[order(links$subject_type, as.numeric(links$subject_id), links$predicate,
                      links$object_type, links$object_id, links$qualifier), ]
