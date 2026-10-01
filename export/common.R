@@ -49,14 +49,16 @@ withheld <- function(db) {
 }
 
 #URLs of files held in Drupal's public file system, with the parts of their
-#paths encoded as Drupal encodes them (e.g. a space is %20)
+#paths encoded as Drupal encodes them (e.g. a space is %20). The files are
+#served from audioBLAST!, which holds a copy of the site's public file system,
+#rather than from bio.acousti.ca itself.
 fileURL <- function(uri) {
   out <- rep(NA_character_, length(uri))
   public <- !is.na(uri) & startsWith(uri, "public://")
   paths <- vapply(strsplit(sub("^public://", "", uri[public]), "/", fixed=TRUE), function(parts) {
     return(paste(vapply(parts, URLencode, character(1), reserved=TRUE, repeated=TRUE), collapse="/"))
   }, character(1))
-  out[public] <- paste0("https://bio.acousti.ca/sites/default/files/", paths)
+  out[public] <- paste0("https://files.audioblast.org/bioacoustica/", paths)
   return(out)
 }
 
